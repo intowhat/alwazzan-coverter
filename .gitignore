@@ -1,0 +1,8 @@
+node_modules/
+storage/uploads/*
+storage/converted/*
+!storage/uploads/.gitkeep
+!storage/converted/.gitkeep
+storage/data/*.json
+.env
+npm-debug.log*

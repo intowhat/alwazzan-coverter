@@ -1,0 +1,17 @@
+{
+  "name": "converter-app",
+  "version": "1.0.0",
+  "description": "Mobile-first secure file converter base",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
+    "multer": "^2.0.2"
+  }
+}
