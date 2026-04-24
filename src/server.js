@@ -53,10 +53,11 @@ app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: NODE_ENV === 'production',
+    secure: 'auto',
     maxAge: 1000 * 60 * 60 * 12,
   },
 }));
