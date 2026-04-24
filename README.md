@@ -7,14 +7,14 @@ Node + Express base for the private converter app.
 - Mobile-first futuristic UI
 - Welcome banner for Bader
 - File upload flow
-- YouTube URL to MP3 flow
+- YouTube/TikTok URL to MP3 flow
 - Background conversion jobs with shallow progress bars
 - Rolling retention of latest 5 converted files
 - Download links for the retained 5 files
 
 ## Important
 - Uploaded audio/video files are converted to MP3 with ffmpeg in the background.
-- YouTube URLs are downloaded with `yt-dlp` and converted to MP3 in the background.
+- YouTube and TikTok URLs are detected by domain, downloaded with `yt-dlp`, and converted to MP3 in the background.
 - Jobs are tracked in persistent JSON metadata and shown in the UI with a shallow progress bar.
 - The Docker image installs `yt-dlp` and `ffmpeg` for Coolify deployment.
 

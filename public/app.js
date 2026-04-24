@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="job-card__top">
           <div>
             <div class="file-rank">${escapeHtml(job.type)}</div>
-            <h3>${escapeHtml(job.type === 'youtube' ? 'YouTube → MP3' : job.label)}</h3>
+            <h3>${escapeHtml(job.type === 'youtube' ? 'Video URL → MP3' : job.label)}</h3>
           </div>
           <span class="chip chip--${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
         </div>

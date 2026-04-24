@@ -5,13 +5,18 @@ const { promisify } = require('util');
 const { CONVERTED_DIR, UPLOADS_DIR, createFileName, safeBaseName } = require('./store');
 
 const execFileAsync = promisify(execFile);
-const YOUTUBE_HOSTS = new Set([
+const SUPPORTED_URL_HOSTS = new Set([
   'youtube.com',
   'www.youtube.com',
   'm.youtube.com',
   'music.youtube.com',
   'youtu.be',
   'www.youtu.be',
+  'tiktok.com',
+  'www.tiktok.com',
+  'm.tiktok.com',
+  'vm.tiktok.com',
+  'vt.tiktok.com',
 ]);
 
 function parseDurationToSeconds(value) {
@@ -102,23 +107,28 @@ async function convertFile(uploadedFile, onProgress = () => {}) {
   };
 }
 
-function isAllowedYoutubeUrl(input) {
+function detectSupportedPlatform(input) {
   try {
     const url = new URL(input);
-    return ['http:', 'https:'].includes(url.protocol) && YOUTUBE_HOSTS.has(url.hostname.toLowerCase());
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    const host = url.hostname.toLowerCase();
+    if (!SUPPORTED_URL_HOSTS.has(host)) return null;
+    if (host.includes('tiktok.com')) return 'tiktok';
+    return 'youtube';
   } catch {
-    return false;
+    return null;
   }
 }
 
 async function convertYoutubeToMp3(inputUrl, onProgress = () => {}) {
-  if (!inputUrl || !isAllowedYoutubeUrl(inputUrl)) {
-    throw new Error('Enter a valid YouTube URL');
+  const platform = detectSupportedPlatform(inputUrl);
+  if (!inputUrl || !platform) {
+    throw new Error('Enter a valid YouTube or TikTok URL');
   }
 
   const tmpDir = path.join(UPLOADS_DIR, `yt-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`);
   await fsp.mkdir(tmpDir, { recursive: true });
-  onProgress({ progress: 12, label: 'Fetching YouTube details' });
+  onProgress({ progress: 12, label: `Fetching ${platform === 'tiktok' ? 'TikTok' : 'YouTube'} details` });
 
   try {
     const { stdout: metaStdout } = await execFileAsync('yt-dlp', [
@@ -133,7 +143,7 @@ async function convertYoutubeToMp3(inputUrl, onProgress = () => {}) {
     const finalPath = path.join(CONVERTED_DIR, finalName);
     const outputTemplate = path.join(tmpDir, 'audio.%(ext)s');
 
-    onProgress({ progress: 32, label: 'Downloading audio from YouTube' });
+    onProgress({ progress: 32, label: `Downloading audio from ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}` });
     const downloadProcess = spawn('yt-dlp', [
       '--extract-audio',
       '--audio-format', 'mp3',
@@ -154,12 +164,12 @@ async function convertYoutubeToMp3(inputUrl, onProgress = () => {}) {
           if (match) {
             const raw = Number.parseFloat(match[1]);
             lastPercent = Math.max(lastPercent, Math.min(72, 32 + Math.round(raw * 0.4)));
-            onProgress({ progress: lastPercent, label: 'Downloading audio from YouTube' });
+            onProgress({ progress: lastPercent, label: `Downloading audio from ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}` });
           }
         }
         if (text.toLowerCase().includes('destination') || text.toLowerCase().includes('extracting audio')) {
           lastPercent = Math.max(lastPercent, 78);
-          onProgress({ progress: lastPercent, label: 'Converting YouTube audio to MP3' });
+          onProgress({ progress: lastPercent, label: `Converting ${platform === 'tiktok' ? 'TikTok' : 'YouTube'} audio to MP3` });
         }
       };
 

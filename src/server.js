@@ -194,7 +194,7 @@ app.get('/', requireAuth, (req, res) => {
         <div class="job-card__top">
           <div>
             <div class="file-rank">${escapeHtml(job.type)}</div>
-            <h3>${escapeHtml(job.type === 'youtube' ? 'YouTube → MP3' : job.label)}</h3>
+            <h3>${escapeHtml(job.type === 'youtube' ? 'Video URL → MP3' : job.label)}</h3>
           </div>
           <span class="chip chip--${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
         </div>
@@ -240,15 +240,15 @@ app.get('/', requireAuth, (req, res) => {
 
       <section class="upload-card glass">
         <div>
-          <h2>YouTube to MP3</h2>
-          <p class="muted">Paste a YouTube link and the app will pull audio, convert it to mp3, and store it in the latest-5 list.</p>
+          <h2>Video URL to MP3</h2>
+          <p class="muted">Paste a YouTube or TikTok link and the app will detect the platform, pull audio, convert it to mp3, and store it in the latest-5 list.</p>
         </div>
         <form method="post" action="/convert/youtube" class="stack">
           <label>
-            <span>YouTube URL</span>
-            <input type="url" name="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." inputmode="url" required />
+            <span>YouTube or TikTok URL</span>
+            <input type="url" name="youtubeUrl" placeholder="https://www.youtube.com/watch?v=... or https://www.tiktok.com/..." inputmode="url" required />
           </label>
-          <button type="submit">Download as MP3</button>
+          <button type="submit">Fetch and convert to MP3</button>
         </form>
       </section>
     </section>
@@ -290,7 +290,7 @@ app.post('/convert/youtube', requireAuth, async (req, res) => {
 
   try {
     enqueueYoutubeJob(youtubeUrl);
-    return res.redirect('/?message=YouTube+job+queued.+We%E2%80%99ll+download+and+convert+it+in+the+background.');
+    return res.redirect('/?message=Video+URL+job+queued.+We%E2%80%99ll+download+and+convert+it+in+the+background.');
   } catch (error) {
     return res.redirect('/?message=' + encodeURIComponent(`Queueing failed: ${error.message}`));
   }
