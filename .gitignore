@@ -4,5 +4,7 @@ storage/converted/*
 !storage/uploads/.gitkeep
 !storage/converted/.gitkeep
 storage/data/*.json
+storage/data/sessions/*
+!storage/data/sessions/.gitkeep
 .env
 npm-debug.log*

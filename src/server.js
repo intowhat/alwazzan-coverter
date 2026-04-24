@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const helmet = require('helmet');
 const compression = require('compression');
 const multer = require('multer');
@@ -15,6 +16,7 @@ const {
   addConvertedRecord,
   getRecentFiles,
   findFile,
+  DATA_DIR,
 } = require('./lib/store');
 
 const app = express();
@@ -50,6 +52,11 @@ app.use(helmet({
 app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
+  store: new FileStore({
+    path: path.join(DATA_DIR, 'sessions'),
+    ttl: 60 * 60 * 12,
+    retries: 1,
+  }),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
