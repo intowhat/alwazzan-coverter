@@ -111,6 +111,7 @@ function renderPage({ title, content, message = '' }) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="/static/styles.css" />
+      <script src="/static/app.js" defer></script>
     </head>
     <body>
       <div class="bg-layer bg-layer--far"></div>
@@ -192,15 +193,15 @@ app.get('/', requireAuth, (req, res) => {
       <section class="upload-card glass">
         <div>
           <h2>Upload a file</h2>
-          <p class="muted">Direct uploads are stored through the same rolling latest-5 system.</p>
+          <p class="muted">Drop audio or video here and it’ll convert to MP3 before landing in the rolling latest-5 list.</p>
         </div>
         <form method="post" action="/convert" enctype="multipart/form-data" class="stack">
-          <label class="upload-zone">
-            <input type="file" name="file" required />
-            <span>Tap to choose a file</span>
-            <small>Max 100MB</small>
+          <label class="upload-zone" data-upload-zone>
+            <input type="file" name="file" accept="audio/*,video/*" required data-file-input />
+            <span class="upload-zone__title">Click to choose a file or drag it here</span>
+            <small class="upload-zone__meta" data-file-label>Audio or video • Max 100MB • Output: MP3</small>
           </label>
-          <button type="submit">Convert upload</button>
+          <button type="submit">Convert to MP3</button>
         </form>
       </section>
 
@@ -236,13 +237,13 @@ app.post('/convert', requireAuth, upload.single('file'), async (req, res) => {
   try {
     const result = await convertFile(req.file);
     addConvertedRecord({
-      originalName: req.file.originalname,
+      originalName: result.originalName,
       storedName: result.storedName,
       mimeType: result.mimeType,
       size: result.size,
     });
     await cleanupUpload(req.file.path);
-    return res.redirect('/?message=File+converted+and+stored');
+    return res.redirect('/?message=File+converted+to+MP3+and+stored');
   } catch (error) {
     await cleanupUpload(req.file.path);
     return res.redirect('/?message=' + encodeURIComponent(`Conversion failed: ${error.message}`));

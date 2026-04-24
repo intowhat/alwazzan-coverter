@@ -12,7 +12,7 @@ Node + Express base for the private converter app.
 - Download links for the retained 5 files
 
 ## Important
-- Uploaded files currently pass through as-is into retained storage.
+- Uploaded audio/video files are converted to MP3 with ffmpeg.
 - YouTube URLs are downloaded with `yt-dlp` and converted to MP3 with ffmpeg.
 - The Docker image installs `yt-dlp` and `ffmpeg` for Coolify deployment.
 

@@ -2,7 +2,7 @@ const path = require('path');
 const { promises: fsp } = require('fs');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const { CONVERTED_DIR, UPLOADS_DIR, createFileName } = require('./store');
+const { CONVERTED_DIR, UPLOADS_DIR, createFileName, safeBaseName } = require('./store');
 
 const execFileAsync = promisify(execFile);
 const YOUTUBE_HOSTS = new Set([
@@ -17,18 +17,32 @@ const YOUTUBE_HOSTS = new Set([
 async function convertFile(uploadedFile) {
   if (!uploadedFile) throw new Error('No file uploaded');
 
-  const storedName = createFileName(uploadedFile.originalname);
+  const baseName = path.parse(uploadedFile.originalname || 'upload').name || 'upload';
+  const storedName = createFileName(`${safeBaseName(baseName)}.mp3`);
   const targetPath = path.join(CONVERTED_DIR, storedName);
 
-  await fsp.copyFile(uploadedFile.path, targetPath);
+  try {
+    await execFileAsync('ffmpeg', [
+      '-y',
+      '-i', uploadedFile.path,
+      '-vn',
+      '-acodec', 'libmp3lame',
+      '-q:a', '2',
+      targetPath,
+    ], { maxBuffer: 1024 * 1024 * 10 });
+  } catch (error) {
+    const details = String(error.stderr || error.stdout || error.message || 'Unknown ffmpeg error').trim();
+    throw new Error(`Could not convert upload to MP3. ${details.split('\n').slice(-4).join(' ')}`);
+  }
+
   const stats = await fsp.stat(targetPath);
 
   return {
-    originalName: uploadedFile.originalname,
+    originalName: `${baseName}.mp3`,
     storedName,
     outputPath: targetPath,
     size: stats.size,
-    mimeType: uploadedFile.mimetype || 'application/octet-stream',
+    mimeType: 'audio/mpeg',
   };
 }
 

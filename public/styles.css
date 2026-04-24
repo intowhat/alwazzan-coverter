@@ -138,6 +138,13 @@ input {
   font: inherit;
 }
 
+input[type='file'][data-file-input] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 button,
 .link-btn {
   border: 0;
@@ -170,18 +177,47 @@ button.ghost {
 }
 
 .upload-zone {
-  border: 1px dashed rgba(255,255,255,0.22);
-  border-radius: 20px;
-  padding: 20px;
+  position: relative;
+  border: 1px dashed rgba(114, 227, 255, 0.34);
+  border-radius: 24px;
+  padding: 26px 18px;
   text-align: center;
-  background: rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  overflow: hidden;
+  min-height: 170px;
+  display: grid;
+  align-content: center;
+  gap: 10px;
 }
 
-.upload-zone input[type='file'] {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  margin-bottom: 14px;
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(114,227,255,0.14), transparent 45%),
+              radial-gradient(circle at bottom, rgba(161,110,255,0.14), transparent 35%);
+  pointer-events: none;
+}
+
+.upload-zone__title,
+.upload-zone__meta {
+  position: relative;
+  z-index: 1;
+}
+
+.upload-zone__title {
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+
+.upload-zone__meta {
+  color: var(--muted);
+}
+
+.upload-zone.is-dragging {
+  border-color: rgba(124, 242, 154, 0.9);
+  box-shadow: 0 0 0 1px rgba(124, 242, 154, 0.4), 0 20px 44px rgba(124, 242, 154, 0.18);
+  transform: translateY(-1px);
 }
 
 .flash {
@@ -262,5 +298,9 @@ button.ghost {
   .tool-grid,
   .file-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .upload-zone {
+    min-height: 210px;
   }
 }
