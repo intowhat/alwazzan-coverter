@@ -7,16 +7,18 @@ const UPLOADS_DIR = path.join(ROOT, 'uploads');
 const CONVERTED_DIR = path.join(ROOT, 'converted');
 const DATA_DIR = path.join(ROOT, 'data');
 const META_PATH = path.join(DATA_DIR, 'files.json');
+const JOBS_PATH = path.join(DATA_DIR, 'jobs.json');
 const MAX_FILES = 5;
+const MAX_JOBS = 20;
 
 for (const dir of [ROOT, UPLOADS_DIR, CONVERTED_DIR, DATA_DIR]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function loadMeta() {
-  if (!fs.existsSync(META_PATH)) return [];
+function loadJsonArray(filePath) {
+  if (!fs.existsSync(filePath)) return [];
   try {
-    const raw = fs.readFileSync(META_PATH, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -24,8 +26,24 @@ function loadMeta() {
   }
 }
 
+function saveJsonArray(filePath, items) {
+  fs.writeFileSync(filePath, JSON.stringify(items, null, 2));
+}
+
+function loadMeta() {
+  return loadJsonArray(META_PATH);
+}
+
 function saveMeta(items) {
-  fs.writeFileSync(META_PATH, JSON.stringify(items, null, 2));
+  saveJsonArray(META_PATH, items);
+}
+
+function loadJobs() {
+  return loadJsonArray(JOBS_PATH);
+}
+
+function saveJobs(items) {
+  saveJsonArray(JOBS_PATH, items.slice(0, MAX_JOBS));
 }
 
 function safeBaseName(name) {
@@ -77,16 +95,85 @@ function findFile(id) {
   return loadMeta().find((item) => item.id === id) || null;
 }
 
+function createJob(data) {
+  const items = loadJobs();
+  const job = {
+    id: crypto.randomUUID(),
+    type: data.type,
+    label: data.label,
+    source: data.source,
+    tempPath: data.tempPath || null,
+    status: 'queued',
+    progress: 4,
+    progressLabel: 'Queued',
+    error: null,
+    resultFileId: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  items.unshift(job);
+  saveJobs(items);
+  return job;
+}
+
+function updateJob(id, patch) {
+  const items = loadJobs();
+  const index = items.findIndex((item) => item.id === id);
+  if (index === -1) return null;
+  items[index] = {
+    ...items[index],
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  saveJobs(items);
+  return items[index];
+}
+
+function getJob(id) {
+  return loadJobs().find((item) => item.id === id) || null;
+}
+
+function getRecentJobs() {
+  return loadJobs();
+}
+
+function markInFlightJobsInterrupted() {
+  const items = loadJobs();
+  let changed = false;
+  const next = items.map((item) => {
+    if (item.status === 'queued' || item.status === 'processing') {
+      changed = true;
+      return {
+        ...item,
+        status: 'failed',
+        progress: item.progress || 0,
+        progressLabel: 'Interrupted by restart',
+        error: item.error || 'The app restarted before this job finished.',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return item;
+  });
+  if (changed) saveJobs(next);
+}
+
 module.exports = {
   ROOT,
   UPLOADS_DIR,
   CONVERTED_DIR,
   DATA_DIR,
   META_PATH,
+  JOBS_PATH,
   MAX_FILES,
   createFileName,
   addConvertedRecord,
   getRecentFiles,
   findFile,
   safeBaseName,
+  createJob,
+  updateJob,
+  getJob,
+  getRecentJobs,
+  markInFlightJobsInterrupted,
 };

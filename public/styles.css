@@ -240,6 +240,66 @@ button.ghost {
   margin-top: 18px;
 }
 
+.status-banner,
+.job-card {
+  padding: 18px;
+  border-radius: 24px;
+}
+
+.status-banner {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.job-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin: 10px 0 12px;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  box-shadow: 0 0 16px rgba(114, 227, 255, 0.35);
+}
+
+.error-text {
+  color: #ffb0b0;
+  font-size: 0.92rem;
+}
+
+.chip--queued,
+.chip--processing {
+  color: var(--primary);
+}
+
+.chip--done {
+  color: var(--success);
+  background: rgba(124, 242, 154, 0.1);
+  border-color: rgba(124, 242, 154, 0.18);
+}
+
+.chip--failed {
+  color: #ffb0b0;
+  background: rgba(255, 109, 109, 0.1);
+  border-color: rgba(255, 109, 109, 0.18);
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -293,6 +353,10 @@ button.ghost {
 @media (min-width: 720px) {
   .shell {
     padding: 36px 20px 64px;
+  }
+
+  .status-banner {
+    padding: 22px;
   }
 
   .tool-grid,

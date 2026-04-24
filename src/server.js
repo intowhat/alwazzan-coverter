@@ -8,16 +8,15 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
-const { convertFile, convertYoutubeToMp3, cleanupUpload } = require('./lib/converter');
+const { cleanupUpload } = require('./lib/converter');
 const {
   UPLOADS_DIR,
   CONVERTED_DIR,
-  createFileName,
-  addConvertedRecord,
   getRecentFiles,
   findFile,
   DATA_DIR,
 } = require('./lib/store');
+const { enqueueUploadJob, enqueueYoutubeJob, listJobs } = require('./lib/jobs');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3080);
@@ -25,7 +24,6 @@ const HOST = process.env.HOST || '0.0.0.0';
 const APP_USERNAME = process.env.APP_USERNAME || 'bader';
 const APP_PASSWORD = process.env.APP_PASSWORD || 'mp3!alsayegh';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
-const NODE_ENV = process.env.NODE_ENV || 'development';
 const SITE_TITLE = 'Future Converter';
 
 app.set('trust proxy', 1);
@@ -188,12 +186,40 @@ app.get('/', requireAuth, (req, res) => {
     `).join('')
     : '<div class="empty glass">No converted files yet. Upload the first one.</div>';
 
+  const jobs = listJobs();
+  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'processing');
+  const jobCards = jobs.length
+    ? jobs.map((job) => `
+      <article class="job-card glass" data-job-card>
+        <div class="job-card__top">
+          <div>
+            <div class="file-rank">${escapeHtml(job.type)}</div>
+            <h3>${escapeHtml(job.type === 'youtube' ? 'YouTube → MP3' : job.label)}</h3>
+          </div>
+          <span class="chip chip--${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
+        </div>
+        <p class="muted">${escapeHtml(job.progressLabel || 'Queued')}</p>
+        <div class="progress"><span style="width:${Number(job.progress || 0)}%"></span></div>
+        ${job.error ? `<p class="error-text">${escapeHtml(job.error)}</p>` : ''}
+        ${job.resultFileId ? `<a class="link-btn" href="/file/${encodeURIComponent(job.resultFileId)}">Download MP3</a>` : ''}
+      </article>
+    `).join('')
+    : '<div class="empty glass">No jobs yet. Start a conversion above.</div>';
+
   const content = `
     <section class="hero glass">
       <div class="eyebrow">Private conversion portal</div>
       <h1>welcome bader, what are we converting today?</h1>
       <p class="muted">Mobile-first, locked down, and keeping only your latest 5 converted files live.</p>
       <form method="post" action="/logout"><button class="ghost" type="submit">Log out</button></form>
+    </section>
+
+    <section class="status-banner glass">
+      <div>
+        <h2>Conversion queue</h2>
+        <p class="muted">${activeJobs.length ? `${activeJobs.length} job${activeJobs.length > 1 ? 's are' : ' is'} running in the background.` : 'No active jobs right now.'}</p>
+      </div>
+      <span class="chip">Background jobs</span>
     </section>
 
     <section class="tool-grid">
@@ -229,6 +255,14 @@ app.get('/', requireAuth, (req, res) => {
 
     <section class="files-section">
       <div class="section-head">
+        <h2>Jobs</h2>
+        <span class="chip">Auto-refreshing</span>
+      </div>
+      <div class="file-grid" data-jobs-root>${jobCards}</div>
+    </section>
+
+    <section class="files-section">
+      <div class="section-head">
         <h2>Latest 5 files</h2>
         <span class="chip">Rolling retention</span>
       </div>
@@ -242,18 +276,11 @@ app.post('/convert', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.redirect('/?message=No+file+uploaded');
 
   try {
-    const result = await convertFile(req.file);
-    addConvertedRecord({
-      originalName: result.originalName,
-      storedName: result.storedName,
-      mimeType: result.mimeType,
-      size: result.size,
-    });
-    await cleanupUpload(req.file.path);
-    return res.redirect('/?message=File+converted+to+MP3+and+stored');
+    enqueueUploadJob(req.file);
+    return res.redirect('/?message=Upload+queued.+We%E2%80%99ll+convert+it+to+MP3+in+the+background.');
   } catch (error) {
     await cleanupUpload(req.file.path);
-    return res.redirect('/?message=' + encodeURIComponent(`Conversion failed: ${error.message}`));
+    return res.redirect('/?message=' + encodeURIComponent(`Queueing failed: ${error.message}`));
   }
 });
 
@@ -262,17 +289,15 @@ app.post('/convert/youtube', requireAuth, async (req, res) => {
   if (!youtubeUrl) return res.redirect('/?message=No+YouTube+URL+provided');
 
   try {
-    const result = await convertYoutubeToMp3(youtubeUrl);
-    addConvertedRecord({
-      originalName: result.originalName,
-      storedName: result.storedName,
-      mimeType: result.mimeType,
-      size: result.size,
-    });
-    return res.redirect('/?message=YouTube+audio+downloaded+as+MP3');
+    enqueueYoutubeJob(youtubeUrl);
+    return res.redirect('/?message=YouTube+job+queued.+We%E2%80%99ll+download+and+convert+it+in+the+background.');
   } catch (error) {
-    return res.redirect('/?message=' + encodeURIComponent(`YouTube conversion failed: ${error.message}`));
+    return res.redirect('/?message=' + encodeURIComponent(`Queueing failed: ${error.message}`));
   }
+});
+
+app.get('/api/jobs', requireAuth, (_req, res) => {
+  res.json({ jobs: listJobs() });
 });
 
 app.get('/file/:id', requireAuth, (req, res) => {
