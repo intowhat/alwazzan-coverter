@@ -6,14 +6,15 @@ Node + Express base for the private converter app.
 - Session login with static credentials
 - Mobile-first futuristic UI
 - Welcome banner for Bader
-- Upload flow
+- File upload flow
+- YouTube URL to MP3 flow
 - Rolling retention of latest 5 converted files
 - Download links for the retained 5 files
 
 ## Important
-The current conversion engine is a safe passthrough placeholder in `src/lib/converter.js`.
-It copies the uploaded file into the converted storage so the full app flow works now.
-Replace that function with the real conversion logic once you define the exact input/output format.
+- Uploaded files currently pass through as-is into retained storage.
+- YouTube URLs are downloaded with `yt-dlp` and converted to MP3 with ffmpeg.
+- The Docker image installs `yt-dlp` and `ffmpeg` for Coolify deployment.
 
 ## Coolify deployment
 Use `docker-compose.yml` as the source of truth.

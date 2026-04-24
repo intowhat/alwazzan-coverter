@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
-const { convertFile, cleanupUpload } = require('./lib/converter');
+const { convertFile, convertYoutubeToMp3, cleanupUpload } = require('./lib/converter');
 const {
   UPLOADS_DIR,
   CONVERTED_DIR,
@@ -188,19 +188,35 @@ app.get('/', requireAuth, (req, res) => {
       <form method="post" action="/logout"><button class="ghost" type="submit">Log out</button></form>
     </section>
 
-    <section class="upload-card glass">
-      <div>
-        <h2>Upload a file</h2>
-        <p class="muted">Current conversion engine is a safe passthrough base. Swap in ffmpeg or another processor once the exact conversion type is defined.</p>
-      </div>
-      <form method="post" action="/convert" enctype="multipart/form-data" class="stack">
-        <label class="upload-zone">
-          <input type="file" name="file" required />
-          <span>Tap to choose a file</span>
-          <small>Max 100MB</small>
-        </label>
-        <button type="submit">Convert now</button>
-      </form>
+    <section class="tool-grid">
+      <section class="upload-card glass">
+        <div>
+          <h2>Upload a file</h2>
+          <p class="muted">Direct uploads are stored through the same rolling latest-5 system.</p>
+        </div>
+        <form method="post" action="/convert" enctype="multipart/form-data" class="stack">
+          <label class="upload-zone">
+            <input type="file" name="file" required />
+            <span>Tap to choose a file</span>
+            <small>Max 100MB</small>
+          </label>
+          <button type="submit">Convert upload</button>
+        </form>
+      </section>
+
+      <section class="upload-card glass">
+        <div>
+          <h2>YouTube to MP3</h2>
+          <p class="muted">Paste a YouTube link and the app will pull audio, convert it to mp3, and store it in the latest-5 list.</p>
+        </div>
+        <form method="post" action="/convert/youtube" class="stack">
+          <label>
+            <span>YouTube URL</span>
+            <input type="url" name="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." inputmode="url" required />
+          </label>
+          <button type="submit">Download as MP3</button>
+        </form>
+      </section>
     </section>
 
     <section class="files-section">
@@ -230,6 +246,24 @@ app.post('/convert', requireAuth, upload.single('file'), async (req, res) => {
   } catch (error) {
     await cleanupUpload(req.file.path);
     return res.redirect('/?message=' + encodeURIComponent(`Conversion failed: ${error.message}`));
+  }
+});
+
+app.post('/convert/youtube', requireAuth, async (req, res) => {
+  const youtubeUrl = String(req.body?.youtubeUrl || '').trim();
+  if (!youtubeUrl) return res.redirect('/?message=No+YouTube+URL+provided');
+
+  try {
+    const result = await convertYoutubeToMp3(youtubeUrl);
+    addConvertedRecord({
+      originalName: result.originalName,
+      storedName: result.storedName,
+      mimeType: result.mimeType,
+      size: result.size,
+    });
+    return res.redirect('/?message=YouTube+audio+downloaded+as+MP3');
+  } catch (error) {
+    return res.redirect('/?message=' + encodeURIComponent(`YouTube conversion failed: ${error.message}`));
   }
 });
 

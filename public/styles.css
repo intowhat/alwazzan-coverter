@@ -86,6 +86,11 @@ body {
   margin-bottom: 18px;
 }
 
+.tool-grid {
+  display: grid;
+  gap: 18px;
+}
+
 .hero h1,
 .auth-card h1,
 .upload-card h2,
@@ -195,6 +200,10 @@ button.ghost {
   margin: 8px 0 16px;
 }
 
+.files-section {
+  margin-top: 18px;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -250,6 +259,7 @@ button.ghost {
     padding: 36px 20px 64px;
   }
 
+  .tool-grid,
   .file-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
