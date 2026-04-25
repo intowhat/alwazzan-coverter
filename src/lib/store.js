@@ -9,7 +9,7 @@ const DATA_DIR = path.join(ROOT, 'data');
 const META_PATH = path.join(DATA_DIR, 'files.json');
 const JOBS_PATH = path.join(DATA_DIR, 'jobs.json');
 const MAX_FILES = 5;
-const MAX_JOBS = 20;
+const MAX_JOBS = 5;
 
 for (const dir of [ROOT, UPLOADS_DIR, CONVERTED_DIR, DATA_DIR]) {
   fs.mkdirSync(dir, { recursive: true });
@@ -42,8 +42,24 @@ function loadJobs() {
   return loadJsonArray(JOBS_PATH);
 }
 
+function cleanupRemovedJob(job) {
+  if (!job) return;
+  if (job.tempPath && fs.existsSync(job.tempPath)) {
+    try { fs.unlinkSync(job.tempPath); } catch {}
+  }
+  if (job.storedName) {
+    const target = path.join(CONVERTED_DIR, job.storedName);
+    if (fs.existsSync(target)) {
+      try { fs.unlinkSync(target); } catch {}
+    }
+  }
+}
+
 function saveJobs(items) {
-  saveJsonArray(JOBS_PATH, items.slice(0, MAX_JOBS));
+  const trimmed = items.slice(0, MAX_JOBS);
+  const removed = items.slice(MAX_JOBS);
+  for (const job of removed) cleanupRemovedJob(job);
+  saveJsonArray(JOBS_PATH, trimmed);
 }
 
 function safeBaseName(name) {
@@ -107,7 +123,10 @@ function createJob(data) {
     progress: 4,
     progressLabel: 'Queued',
     error: null,
-    resultFileId: null,
+    storedName: null,
+    originalName: null,
+    mimeType: null,
+    size: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

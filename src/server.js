@@ -12,8 +12,6 @@ const { cleanupUpload } = require('./lib/converter');
 const {
   UPLOADS_DIR,
   CONVERTED_DIR,
-  getRecentFiles,
-  findFile,
   DATA_DIR,
 } = require('./lib/store');
 const { enqueueUploadJob, enqueueYoutubeJob, listJobs } = require('./lib/jobs');
@@ -169,42 +167,25 @@ app.post('/logout', requireAuth, (req, res) => {
 });
 
 app.get('/', requireAuth, (req, res) => {
-  const files = getRecentFiles();
-  const fileCards = files.length
-    ? files.map((file, index) => `
-      <article class="file-card glass">
-        <div class="file-card__top">
-          <div>
-            <div class="file-rank">0${index + 1}</div>
-            <h3>${escapeHtml(file.originalName)}</h3>
-          </div>
-          <span class="chip">${bytesToSize(file.size)}</span>
-        </div>
-        <p class="muted">Stored ${new Date(file.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-        <a class="link-btn" href="/file/${encodeURIComponent(file.id)}">Download</a>
-      </article>
-    `).join('')
-    : '<div class="empty glass">No converted files yet. Upload the first one.</div>';
-
   const jobs = listJobs();
-  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'processing');
-  const jobCards = jobs.length
-    ? jobs.map((job) => `
+  const latestCards = jobs.length
+    ? jobs.map((job, index) => `
       <article class="job-card glass" data-job-card>
         <div class="job-card__top">
           <div>
-            <div class="file-rank">${escapeHtml(job.type)}</div>
-            <h3>${escapeHtml(job.type === 'youtube' ? 'Video URL → MP3' : job.label)}</h3>
+            <div class="file-rank">0${index + 1} · ${escapeHtml(job.type)}</div>
+            <h3>${escapeHtml(job.originalName || (job.type === 'youtube' ? 'Video URL → MP3' : job.label))}</h3>
           </div>
           <span class="chip chip--${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
         </div>
+        ${job.size ? `<p class="muted">${bytesToSize(job.size)}</p>` : ''}
         <p class="muted">${escapeHtml(job.progressLabel || 'Queued')}</p>
         <div class="progress"><span style="width:${Number(job.progress || 0)}%"></span></div>
         ${job.error ? `<p class="error-text">${escapeHtml(job.error)}</p>` : ''}
-        ${job.resultFileId ? `<a class="link-btn" href="/file/${encodeURIComponent(job.resultFileId)}">Download MP3</a>` : ''}
+        ${job.storedName ? `<a class="link-btn" href="/file/${encodeURIComponent(job.id)}">Download MP3</a>` : ''}
       </article>
     `).join('')
-    : '<div class="empty glass">No jobs yet. Start a conversion above.</div>';
+    : '<div class="empty glass">No conversions yet. Start the first one.</div>';
 
   const content = `
     <section class="hero glass">
@@ -212,14 +193,6 @@ app.get('/', requireAuth, (req, res) => {
       <h1>welcome bader, what are we converting today?</h1>
       <p class="muted">Mobile-first, locked down, and keeping only your latest 5 converted files live.</p>
       <form method="post" action="/logout"><button class="ghost" type="submit">Log out</button></form>
-    </section>
-
-    <section class="status-banner glass">
-      <div>
-        <h2>Conversion queue</h2>
-        <p class="muted">${activeJobs.length ? `${activeJobs.length} job${activeJobs.length > 1 ? 's are' : ' is'} running in the background.` : 'No active jobs right now.'}</p>
-      </div>
-      <span class="chip">Background jobs</span>
     </section>
 
     <section class="tool-grid">
@@ -255,18 +228,10 @@ app.get('/', requireAuth, (req, res) => {
 
     <section class="files-section">
       <div class="section-head">
-        <h2>Jobs</h2>
-        <span class="chip">Auto-refreshing</span>
+        <h2>Latest 5 conversions</h2>
+        <span class="chip">Queue + retention</span>
       </div>
-      <div class="file-grid" data-jobs-root>${jobCards}</div>
-    </section>
-
-    <section class="files-section">
-      <div class="section-head">
-        <h2>Latest 5 files</h2>
-        <span class="chip">Rolling retention</span>
-      </div>
-      <div class="file-grid">${fileCards}</div>
+      <div class="file-grid" data-jobs-root>${latestCards}</div>
     </section>`;
 
   res.send(renderPage({ title: SITE_TITLE, content, message: req.query.message || '' }));
@@ -301,11 +266,11 @@ app.get('/api/jobs', requireAuth, (_req, res) => {
 });
 
 app.get('/file/:id', requireAuth, (req, res) => {
-  const file = findFile(req.params.id);
-  if (!file) return res.status(404).send('File not found');
-  const target = path.join(CONVERTED_DIR, file.storedName);
+  const job = listJobs().find((item) => item.id === req.params.id);
+  if (!job || !job.storedName) return res.status(404).send('File not found');
+  const target = path.join(CONVERTED_DIR, job.storedName);
   if (!fs.existsSync(target)) return res.status(404).send('Stored file missing');
-  return res.download(target, file.originalName);
+  return res.download(target, job.originalName || 'converted.mp3');
 });
 
 app.listen(PORT, HOST, () => {

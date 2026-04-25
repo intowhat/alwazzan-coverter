@@ -3,7 +3,6 @@ const {
   updateJob,
   getRecentJobs,
   markInFlightJobsInterrupted,
-  addConvertedRecord,
 } = require('./store');
 const { convertFile, convertYoutubeToMp3, cleanupUpload } = require('./converter');
 
@@ -41,19 +40,20 @@ async function processNextJob() {
           mimetype: 'application/octet-stream',
         }, onProgress);
 
-    const stored = addConvertedRecord({
-      originalName: result.originalName,
-      storedName: result.storedName,
-      mimeType: result.mimeType,
-      size: result.size,
-    });
-
-    updateJob(nextJob.id, {
+    const updated = updateJob(nextJob.id, {
       status: 'done',
       progress: 100,
       progressLabel: 'Ready to download',
-      resultFileId: stored.id,
+      storedName: result.storedName,
+      originalName: result.originalName,
+      mimeType: result.mimeType,
+      size: result.size,
+      tempPath: null,
     });
+
+    if (!updated && result.outputPath) {
+      await cleanupUpload(result.outputPath);
+    }
   } catch (error) {
     updateJob(nextJob.id, {
       status: 'failed',
