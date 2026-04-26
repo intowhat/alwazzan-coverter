@@ -46,6 +46,18 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/'/g, '&#39;');
   }
 
+  function formatBytes(bytes = 0) {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let value = bytes / 1024;
+    let unit = units[0];
+    for (let i = 0; i < units.length - 1 && value >= 1024; i += 1) {
+      value /= 1024;
+      unit = units[i + 1];
+    }
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${unit}`;
+  }
+
   function renderJobs(jobs) {
     if (!jobsRoot) return;
     if (!jobs.length) {
@@ -62,10 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <span class="chip chip--${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
         </div>
+        ${job.size ? `<p class="muted">${escapeHtml(formatBytes(job.size))}</p>` : ''}
         <p class="muted">${escapeHtml(job.progressLabel || 'Queued')}</p>
         <div class="progress"><span style="width:${Number(job.progress || 0)}%"></span></div>
         ${job.error ? `<p class="error-text">${escapeHtml(job.error)}</p>` : ''}
-        ${job.resultFileId ? `<a class="link-btn" href="/file/${encodeURIComponent(job.resultFileId)}">Download MP3</a>` : ''}
+        ${job.storedName ? `<a class="link-btn" href="/file/${encodeURIComponent(job.id)}">Download MP3</a>` : ''}
       </article>
     `).join('');
   }
